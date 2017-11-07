@@ -1,1 +1,6 @@
 # splunk-tp
+
+- Tasks
+  - diskclean
+
+
