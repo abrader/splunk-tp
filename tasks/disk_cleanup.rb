@@ -1,6 +1,7 @@
 #!/opt/puppetlabs/puppet/bin/ruby
 require 'puppet'
 require 'facter'
+require 'open3'
 # Required to find pluginsync'd plugins
 Puppet.initialize_settings
 require 'json'
@@ -19,17 +20,28 @@ def restart(os_name, os_family, os_release)
   if os_name   == 'Debian' && os_release >= 7 || \
      os_family == 'RedHat' && os_release >= 7 || \
      os_name   == 'Ubuntu' && os_release >= 14.04
-    system('systemctl restart rsyslog')
+    cmd_string = 'systemctl restart rsyslog'
   else
-    system('service splunk restart')
+    cmd_string = 'service splunk restart'
   end
 
-  { status: 'restarted', service: 'splunk' }
+  stdout, stderr, status = Open3.capture3(cmd_string)
+  raise Puppet::Error, stderr if status != 0
+  if stdout.empty?
+    { status: 'success' }
+  else
+    { status: stdout.strip }
+  end
 end
 
 def integrity
-  #TODO Dom to fill me on how this should work.
-  { status: 'checked', package: 'splunk' }
+  stdout, stderr, status = Open3.capture3('myisamchk /var/lib/mysql/bugs/*.MYI')
+  raise Puppet::Error, stderr if status != 0
+  if stdout.empty?
+    { status: 'success' }
+  else
+    { status: stdout.strip }
+  end
 end
 
 begin
